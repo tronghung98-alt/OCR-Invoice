@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Xác nhận {{ r.so_de_nghi }}{% endblock %}
+{% block body_class %}confirm-body{% endblock %}
+{% block main_class %}confirm-page{% endblock %}
+{% block content %}
+<section class="confirm-sheet">
+  <img class="brand-logo" src="/static/logo.png?v=1" alt="">
+  <p class="sheet-company">SORIMACHI <span>AX LAB</span></p>
+  <h1>Giấy đề nghị thanh toán {{ r.so_de_nghi or '' }}</h1>
+  <p class="meta">Người đề nghị: <strong>{{ (r.extra or {}).get('nguoi_de_nghi') or r.user.label }}</strong>, gửi lúc {{ r.sent_at|local }}</p>
+
+  {% include "_invoice.html" %}
+  <p class="links"><a href="/xac-nhan/{{ token }}/excel">Tải file Excel</a> <a href="/xac-nhan/{{ token }}/hoa-don" target="_blank" rel="noopener">Xem hóa đơn gốc</a></p>
+
+  {% if r.status == 'confirmed' %}
+    <div class="confirmed">
+      <span class="stamp" aria-hidden="true">✓</span>
+      <p><strong>Đã xác nhận đọc</strong><br>{{ r.confirmed_by }}, {{ r.confirmed_at|local }}</p>
+    </div>
+  {% elif usable %}
+    <form method="post" action="/xac-nhan/{{ token }}" class="confirm-form">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn btn-seal" type="submit">Xác nhận đã đọc</button>
+      <p class="hint">Xác nhận với tư cách {{ r.sent_to }}.</p>
+    </form>
+  {% else %}
+    <div class="flash flash-error">Đường dẫn này đã hết hạn hoặc phiếu đã được thu hồi để sửa. Liên hệ người đề nghị để nhận mail mới.</div>
+  {% endif %}
+</section>
+{% endblock %}

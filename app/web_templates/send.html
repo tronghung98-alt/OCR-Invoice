@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Gửi {{ r.so_de_nghi }}{% endblock %}
+{% block content %}
+<a class="back" href="/de-nghi/{{ r.id }}">{{ r.so_de_nghi or ('Phiếu #' ~ r.id) }}</a>
+<h1>Xác nhận và gửi mail</h1>
+<p class="lede">Kiểm tra lần cuối. Quản lý sẽ nhận mail kèm file Excel và nút Xác nhận. Chưa đúng thì quay lại sửa.</p>
+
+<div class="send-grid">
+  <section class="extracted">
+    <h2>{{ r.so_de_nghi or ('Phiếu #' ~ r.id) }}</h2>
+    {% include "_invoice.html" %}
+    <p><a href="/de-nghi/{{ r.id }}/excel">Tải file Excel sẽ đính kèm</a></p>
+  </section>
+
+  <form method="post" action="/de-nghi/{{ r.id }}/gui" class="panel stack send-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% if r.warnings %}
+    <div class="flash flash-warn"><strong>Còn {{ r.warnings|length }} điểm AI chưa chắc chắn:</strong>
+      <ul>{% for w in r.warnings %}<li>{{ w }}</li>{% endfor %}</ul></div>
+    <label class="check strong"><input type="checkbox" name="da_kiem_tra" value="true" required> Tôi đã kiểm tra các điểm trên với hóa đơn gốc</label>
+    {% endif %}
+
+    <label class="field"><span>Mail người quản lý</span>
+      <input type="email" name="to" value="{{ default_to }}" list="managers" required autocomplete="email"></label>
+    <datalist id="managers">{% for m in managers %}<option value="{{ m.email }}">{{ m.label }}</option>{% endfor %}</datalist>
+    {% if not managers %}<p class="hint">Chưa có ai được đặt làm quản lý. Quản trị viên vào trang Người dùng để thêm.</p>{% endif %}
+
+    <label class="field"><span>Lời nhắn (không bắt buộc)</span><textarea name="note" rows="3"></textarea></label>
+
+    {% if local_link %}<p class="flash flash-warn">Nút Xác nhận trong mail sẽ trỏ tới <strong>{{ base }}</strong>, quản lý mở từ máy khác sẽ không vào được. Đặt <code>PUBLIC_BASE_URL</code> trong .env (vd http://192.168.1.25:8000).</p>{% endif %}
+    {% if not smtp %}<p class="flash flash-info">Chưa cấu hình SMTP: mail sẽ được lưu thành file trong <code>data\outbox</code> để thử, chưa gửi thật.</p>{% endif %}
+
+    <div class="actions">
+      <button class="btn btn-primary" type="submit">{{ 'Gửi lại mail' if r.status == 'sent' else 'Gửi mail cho quản lý' }}</button>
+      {% if r.status == 'review' %}<a class="btn" href="/de-nghi/{{ r.id }}/sua">Chưa đúng, quay lại sửa</a>
+      {% else %}<a class="btn-link" href="/de-nghi/{{ r.id }}">Hủy</a>{% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

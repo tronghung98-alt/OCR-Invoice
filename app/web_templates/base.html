@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Đề nghị thanh toán{% endblock %} | Sorimachi AX LAB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Noto+Serif+JP:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css?v=17">
+<!-- <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='none' stroke='%23C23B2E' stroke-width='3'/><text x='16' y='22' font-size='16' text-anchor='middle' fill='%23C23B2E'>済</text></svg>"> -->
+<link rel="icon" type="image/png" href="/static/logo.png?v=1">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+{% if user %}
+<header class="topbar">
+  <a class="brand" href="/de-nghi">
+    <img class="brand-logo" src="/static/logo.png?v=1" alt="">
+    <span class="brand-text">Đề nghị thanh toán<small>Sorimachi AX LAB</small></span>
+  </a>
+  <nav class="nav" aria-label="Chính">
+    <a href="/de-nghi" {% if now_path.startswith('/de-nghi') %}aria-current="page"{% endif %}>Đề nghị đã gửi</a>
+    <a href="/" {% if now_path == '/' %}aria-current="page"{% endif %}>Gửi hóa đơn</a>
+    {% if user.is_admin %}<a href="/nguoi-dung" {% if now_path.startswith('/nguoi-dung') %}aria-current="page"{% endif %}>Người dùng</a>{% endif %}
+  </nav>
+  <div class="me">
+    <a href="/tai-khoan" class="me-name" {% if now_path == '/tai-khoan' %}aria-current="page"{% endif %}>{{ user.full_name or user.username }}</a>
+    <form method="post" action="/logout">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn-link" type="submit">Đăng xuất</button>
+    </form>
+  </div>
+</header>
+{% endif %}
+<main class="{% block main_class %}page{% endblock %}">
+  {% if flash %}<div class="flash flash-{{ flash.kind }}" role="status">{{ flash.msg }}</div>{% endif %}
+  {% block content %}{% endblock %}
+</main>
+<script src="/static/app.js?v=10" defer></script>
+</body>
+</html>

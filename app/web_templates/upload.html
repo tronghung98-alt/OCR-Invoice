@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% from "_macros.html" import logo_picker %}
+{% block title %}Gửi hóa đơn{% endblock %}
+{% block content %}
+<h1>Gửi hóa đơn</h1>
+<p class="lede">Chọn một hoặc nhiều hóa đơn, mỗi hóa đơn thành một phiếu đề nghị. AI đọc lần lượt từng file, tự soát tiền, thuế, ngày rồi chuyển phiếu sang “Chờ xem xét” để bạn kiểm tra trước khi gửi quản lý.</p>
+{% if error %}<div class="flash flash-error" role="alert">{{ error }}</div>{% endif %}
+
+<form method="post" action="/de-nghi" enctype="multipart/form-data" class="upload-form upload-layout" data-max-mb="{{ max_mb }}" data-max-files="{{ max_files }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+
+  <div class="up-drop">
+    <label class="dropzone" for="files">
+      <input id="files" name="files" type="file" multiple required accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/*">
+      <span class="dz-title">Kéo hóa đơn vào đây hoặc <u>chọn file</u></span>
+      <span class="dz-sub">PDF, JPG, PNG, tối đa {{ max_mb|int }} MB mỗi file, {{ max_files }} file mỗi lần</span>
+    </label>
+    <ul class="file-list" id="file-list" aria-live="polite"></ul>
+  </div>
+
+  <fieldset class="panel up-info">
+    <legend>Thông tin trên phiếu</legend>
+    <div class="info-grid">
+      {{ logo_picker(DEFAULT_LOGO, remember=true) }}
+      <label class="field"><span>Người đề nghị</span><input name="nguoi_de_nghi" value="{{ user.full_name }}"></label>
+      <label class="field"><span>Bộ phận</span><input name="bo_phan" value="{{ user.department }}"></label>
+      <label class="field span-2"><span>Đã tạm ứng (đồng)</span><input name="da_tam_ung" inputmode="numeric" placeholder="Bỏ trống nếu không tạm ứng"></label>
+      <p class="info-sub">Người ký trên phiếu</p>
+      <label class="field"><span>Người phê duyệt</span><input name="nguoi_phe_duyet" data-remember></label>
+      <label class="field"><span>Kế toán</span><input name="ke_toan" data-remember></label>
+      <label class="field"><span>Trưởng bộ phận</span><input name="truong_bo_phan" data-remember></label>
+    </div>
+    <p class="hint">Logo và tên người ký được nhớ cho lần sau trên máy này.</p>
+  </fieldset>
+
+  <details class="panel up-tpl">
+    <summary>Mẫu đề nghị thanh toán khác</summary>
+    <p>Bỏ trống để dùng mẫu mặc định. Mẫu tự làm giữ nguyên logo có sẵn trong mẫu, không dùng logo chọn ở bên. Muốn tự làm mẫu, <a href="/mau-mac-dinh">tải mẫu mặc định</a> về và sửa theo hướng dẫn trong sheet <em>_Huong dan</em>.</p>
+    <label class="field"><span>Mẫu Excel (.xlsx)</span><input name="template" type="file" accept=".xlsx"></label>
+  </details>
+
+  <div class="actions up-submit">
+    <button class="btn btn-primary" type="submit" id="submit-btn">Gửi cho AI đọc</button>
+  </div>
+</form>
+{% endblock %}

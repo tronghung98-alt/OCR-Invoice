@@ -1,0 +1,25 @@
+{# Con dấu trạng thái - theo đúng các bước trong sơ đồ quy trình #}
+{% macro seal(status, big=false) -%}
+{%- set SEALS = {'queued': ('待', 'seal-wait'), 'processing': ('読', 'seal-busy'), 'needs_human': ('要', 'seal-human'),
+                 'review': ('⧖', 'seal-review'), 'sent': ('✉', 'seal-sent'), 'confirmed': ('✓', 'seal-done')} -%}
+{%- set s = SEALS.get(status, ('?', '')) -%}
+<span class="seal {{ s[1] }}{% if big %} seal-big{% endif %}" title="{{ STATUS_LABELS.get(status, status) }}"><span class="seal-mark" aria-hidden="true">{{ s[0] }}</span><span class="seal-label">{{ STATUS_LABELS.get(status, status) }}</span></span>
+{%- endmacro %}
+
+{# Chọn logo in trên phiếu Excel (trang Gửi hóa đơn và trang Sửa) #}
+{% macro logo_picker(selected, remember=false) -%}
+<fieldset class="logo-pick span-2"{% if remember %} data-remember-radio="logo"{% endif %}>
+  <legend>Logo trên phiếu</legend>
+  <div class="logo-options">
+    {%- for key, (label, file) in LOGOS.items() %}
+    <label class="logo-option">
+      <input type="radio" name="logo" value="{{ key }}" {% if key == (selected or DEFAULT_LOGO) %}checked{% endif %}>
+      <span class="logo-card">
+        <img src="/static/logos/{{ file }}" alt="" width="170" height="37">
+        <span class="logo-name">{{ label }}</span>
+      </span>
+    </label>
+    {%- endfor %}
+  </div>
+</fieldset>
+{%- endmacro %}

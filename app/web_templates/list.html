@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% from "_macros.html" import seal %}
+{% block title %}Đề nghị đã gửi{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Đề nghị đã gửi</h1>
+  <a class="btn btn-primary" href="/">Gửi hóa đơn</a>
+</div>
+
+<nav class="tabs" aria-label="Lọc theo bước" style="overflow-x: visible;">
+  {% for key, label, n in tabs %}
+  <a href="/de-nghi?{{ qs(tab=key, page='') if key else qs(tab='', page='') }}" {% if key == tab %}aria-current="page"{% endif %}>{{ label }}<span class="count">{{ n }}</span></a>
+  {% endfor %}
+</nav>
+
+<form class="filters" method="get" action="/de-nghi" role="search">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <label class="field grow"><span>Tìm</span>
+    <input name="q" value="{{ q }}" placeholder="Số đề nghị, số hóa đơn, bên bán, tên file"></label>
+  <label class="field"><span>Từ ngày</span><input type="date" name="tu_ngay" value="{{ tu_ngay }}"></label>
+  <label class="field"><span>Đến ngày</span><input type="date" name="den_ngay" value="{{ den_ngay }}"></label>
+  {% if user.is_admin %}
+  <label class="field"><span>Người gửi</span>
+    <select name="nguoi_gui"><option value="">Tất cả</option>
+      {% for u in users %}<option value="{{ u.id }}" {% if nguoi_gui == u.id|string %}selected{% endif %}>{{ u.label }}</option>{% endfor %}
+    </select></label>
+  {% endif %}
+  <div class="filter-actions">
+    <button class="btn btn-primary" type="submit">Lọc</button>
+    {% if has_filter %}<a class="btn-link" href="/de-nghi?tab={{ tab }}">Bỏ lọc</a>{% endif %}
+  </div>
+</form>
+
+{% if rows %}
+<p class="summary">{{ total }} phiếu{% if sum_total %}, tổng tiền <strong class="num">{{ sum_total|vnd }} đ</strong>{% endif %}</p>
+<div class="table-wrap list-scroll" data-visible-rows="10">
+<table class="ledger">
+  <thead><tr>
+    <th>Số đề nghị</th><th>Ngày tạo</th><th>Hóa đơn</th><th>Bên bán</th>
+    <th class="r">Tổng tiền</th><th>Trạng thái</th>{% if user.is_admin %}<th>Người gửi</th>{% endif %}
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+  <tr data-href="/de-nghi/{{ r.id }}" class="st-{{ r.status }}">
+    <td><a href="/de-nghi/{{ r.id }}" class="row-link">{{ r.so_de_nghi or ('Phiếu #' ~ r.id) }}</a></td>
+    <td class="nowrap">{{ r.created_at|local }}</td>
+    <td>{% if r.so_hoa_don %}Số {{ r.so_hoa_don }}{% endif %}<small class="file">{{ r.original_filename }}</small></td>
+    <td class="clip"><span class="clamp" title="{{ r.ben_ban or '' }}">{{ r.ben_ban or '' }}</span></td>
+    <td class="r num">{{ r.tong_tien|vnd }}</td>
+    <td>{{ seal(r.status) }}
+      {% if r.status == 'sent' %}<small class="sub">gửi {{ r.sent_to }}</small>
+      {% elif r.status == 'confirmed' %}<small class="sub">{{ r.confirmed_at|local }}</small>
+      {% elif r.status == 'review' and r.warnings %}<small class="sub warn-text">{{ r.warnings|length }} điểm cần kiểm tra</small>{% endif %}</td>
+    {% if user.is_admin %}<td class="nowrap">{{ r.user.label }}</td>{% endif %}
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% if pages > 1 %}
+<nav class="pager" aria-label="Phân trang">
+  <span class="pager-info">Hiển thị {{ (page - 1) * page_size + 1 }}–{{ (page - 1) * page_size + rows|length }} / {{ total }} phiếu</span>
+  <div class="pager-pages">
+    {% if page > 1 %}<a class="page-num" href="/de-nghi?{{ qs(page=page-1) }}" aria-label="Trang trước">‹</a>
+    {% else %}<span class="page-num is-disabled" aria-hidden="true">‹</span>{% endif %}
+    {% set ns = namespace(prev=0) %}
+    {% for p in range(1, pages + 1) %}
+      {% if p == 1 or p == pages or (p >= page - 2 and p <= page + 2) %}
+        {% if p - ns.prev > 1 %}<span class="page-gap">…</span>{% endif %}
+        {% if p == page %}<span class="page-num" aria-current="page">{{ p }}</span>
+        {% else %}<a class="page-num" href="/de-nghi?{{ qs(page=p) }}">{{ p }}</a>{% endif %}
+        {% set ns.prev = p %}
+      {% endif %}
+    {% endfor %}
+    {% if page < pages %}<a class="page-num" href="/de-nghi?{{ qs(page=page+1) }}" aria-label="Trang sau">›</a>
+    {% else %}<span class="page-num is-disabled" aria-hidden="true">›</span>{% endif %}
+  </div>
+</nav>
+{% endif %}
+{% elif has_filter or tab %}
+<div class="empty"><p>Không có phiếu nào ở mục này.</p><a class="btn" href="/de-nghi">Xem tất cả</a></div>
+{% else %}
+<div class="empty"><p>Bạn chưa gửi hóa đơn nào.</p><a class="btn btn-primary" href="/">Gửi hóa đơn đầu tiên</a></div>
+{% endif %}
+{% if my_busy %}
+{# Màn hình chờ: khóa trang khi AI đang đọc hóa đơn của người dùng này #}
+<div class="busy-overlay" id="busy-overlay" role="alertdialog" aria-modal="true" aria-labelledby="busy-title"
+     aria-describedby="busy-text" aria-busy="true" tabindex="-1" data-poll-url="/trang-thai-xu-ly">
+  <div class="busy-box">
+    <div class="spinner" aria-hidden="true"></div>
+    <p class="busy-title" id="busy-title">AI đang đọc hóa đơn</p>
+    <p class="busy-text" id="busy-text">Còn {{ my_busy }} phiếu đang xử lý. Vui lòng chờ, màn hình sẽ tự mở khi xong.</p>
+    <p class="busy-note" id="busy-note" hidden></p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

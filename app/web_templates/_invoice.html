@@ -1,0 +1,29 @@
+{# Bảng tóm tắt nội dung hóa đơn - dùng ở trang chi tiết, trang gửi mail và trang xác nhận của quản lý #}
+<dl class="facts">
+  <dt>Số hóa đơn</dt><dd>{{ d.so_hoa_don or '—' }}{% if d.ky_hieu %} <small>(ký hiệu {{ d.ky_hieu }})</small>{% endif %}</dd>
+  <dt>Ngày hóa đơn</dt><dd>{{ d.ngay_thang_nam or '—' }}</dd>
+  <dt>Bên bán</dt><dd>{{ (d.ben_ban or {}).ten_cong_ty or '—' }}
+    {% if (d.ben_ban or {}).ma_so_thue %}<small>MST {{ d.ben_ban.ma_so_thue }}</small>{% endif %}
+    {% if (d.ben_ban or {}).so_tai_khoan %}<small>TK {{ d.ben_ban.so_tai_khoan }}{% if d.ben_ban.ngan_hang %} tại {{ d.ben_ban.ngan_hang }}{% endif %}</small>{% endif %}</dd>
+  {% if r.extra %}<dt>Trên phiếu</dt><dd>{% for k, v in r.extra.items() %}<small>{{ EXTRA_FIELDS.get(k, k) }}: {{ v|vnd if k == 'da_tam_ung' else v }}</small>{% endfor %}</dd>{% endif %}
+</dl>
+<div class="table-wrap flush">
+<table class="ledger compact">
+  <thead><tr><th>#</th><th>Diễn giải</th><th class="r">SL</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th></tr></thead>
+  <tbody>
+  {% for it in items %}
+    <tr><td>{{ it.stt }}</td><td>{{ it.ten_hang_hoa_dich_vu or '' }}{% if it.don_vi_tinh %} <small>({{ it.don_vi_tinh }})</small>{% endif %}</td>
+      <td class="r num">{{ it.so_luong|num_input }}</td>
+      <td class="r num">{{ it.don_gia|vnd }}</td><td class="r num">{{ it.thanh_tien|vnd }}</td></tr>
+  {% else %}
+    <tr><td colspan="5" class="muted">Chưa có hàng mục nào.</td></tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    {% if d.get('tong_tien_truoc_thue') is not none %}<tr><td colspan="4">Cộng tiền hàng</td><td class="r num">{{ d.tong_tien_truoc_thue|vnd }}</td></tr>{% endif %}
+    {% if d.get('tien_thue') is not none %}<tr><td colspan="4">Thuế GTGT {{ d.thue_suat or '' }}</td><td class="r num">{{ d.tien_thue|vnd }}</td></tr>{% endif %}
+    <tr class="total"><td colspan="4">Tổng thanh toán</td><td class="r num">{{ r.tong_tien|vnd }}</td></tr>
+  </tfoot>
+</table>
+</div>
+{% if d.so_tien_bang_chu %}<p class="muted words">Bằng chữ: {{ d.so_tien_bang_chu }}</p>{% endif %}

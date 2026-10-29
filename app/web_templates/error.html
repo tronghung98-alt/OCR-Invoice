@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Lỗi {{ code }}{% endblock %}
+{% block content %}
+<div class="empty">
+  <p class="err-code">{{ code }}</p>
+  <p>{{ message }}</p>
+  <a class="btn" href="/">Về trang tạo đề nghị</a>
+</div>
+{% endblock %}

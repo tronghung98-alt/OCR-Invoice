@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% from "_macros.html" import logo_picker %}
+{% block title %}Sửa {{ r.so_de_nghi or ('phiếu #' ~ r.id) }}{% endblock %}
+{% block content %}
+<a class="back" href="/de-nghi/{{ r.id }}">{{ r.so_de_nghi or ('Phiếu #' ~ r.id) }}</a>
+<h1>Xem và sửa trực tiếp</h1>
+<p class="lede">Đối chiếu với hóa đơn gốc bên trái. Lưu xong, file Excel được tạo lại ngay và AI tự kiểm tra lại tiền, thuế, ngày.</p>
+{% if errors %}<div class="flash flash-error" role="alert"><strong>Chưa lưu được:</strong><ul>{% for e in errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+{% if r.warnings and not errors %}<div class="flash flash-warn"><strong>Điểm cần xem lại:</strong><ul>{% for w in r.warnings %}<li>{{ w }}</li>{% endfor %}</ul></div>{% endif %}
+
+<div class="edit-grid">
+  <section class="preview" aria-label="Hóa đơn gốc">
+    {% if r.mime_type == 'application/pdf' %}<iframe src="/de-nghi/{{ r.id }}/hoa-don" title="Hóa đơn gốc"></iframe>
+    {% else %}<a href="/de-nghi/{{ r.id }}/hoa-don" target="_blank" rel="noopener"><img src="/de-nghi/{{ r.id }}/hoa-don" alt="Ảnh hóa đơn gốc"></a>{% endif %}
+  </section>
+
+  <form method="post" action="/de-nghi/{{ r.id }}/sua" class="edit-form" id="edit-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% set bb = d.ben_ban or {} %}
+    <fieldset class="panel">
+      <legend>Hóa đơn</legend>
+      <div class="grid-3">
+        <label class="field"><span>Số hóa đơn</span><input name="so_hoa_don" value="{{ d.so_hoa_don or '' }}"></label>
+        <label class="field"><span>Ký hiệu</span><input name="ky_hieu" value="{{ d.ky_hieu or '' }}"></label>
+        <label class="field"><span>Ngày (ngày/tháng/năm)</span><input name="ngay_thang_nam" value="{{ d.ngay_thang_nam or '' }}" placeholder="30/09/2026"></label>
+      </div>
+      <div class="grid-2">
+        <label class="field"><span>Bên bán</span><input name="ben_ban_ten_cong_ty" value="{{ bb.ten_cong_ty or '' }}"></label>
+        <label class="field"><span>Mã số thuế</span><input name="ben_ban_ma_so_thue" value="{{ bb.ma_so_thue or '' }}"></label>
+        <label class="field"><span>Số tài khoản</span><input name="ben_ban_so_tai_khoan" value="{{ bb.so_tai_khoan or '' }}"></label>
+        <label class="field"><span>Ngân hàng</span><input name="ben_ban_ngan_hang" value="{{ bb.ngan_hang or '' }}"></label>
+      </div>
+      <label class="field"><span>Địa chỉ bên bán</span><input name="ben_ban_dia_chi" value="{{ bb.dia_chi or '' }}"></label>
+    </fieldset>
+
+    <fieldset class="panel">
+      <legend>Hàng mục</legend>
+      <div class="table-wrap">
+      <table class="ledger compact items-edit" id="items">
+        <thead><tr><th>Diễn giải</th><th>Đơn vị</th><th class="r">SL</th><th class="r">Đơn giá</th><th class="r">Thành tiền</th><th>Ghi chú</th><th><span class="sr">Xóa</span></th></tr></thead>
+        <tbody>
+        {% for it in (items or [{}]) %}
+          <tr>
+            <td><input name="item_ten" value="{{ it.ten_hang_hoa_dich_vu or '' }}" aria-label="Diễn giải"></td>
+            <td><input name="item_dvt" value="{{ it.don_vi_tinh or '' }}" class="w-s" aria-label="Đơn vị"></td>
+            <td><input name="item_sl" value="{{ it.so_luong|num_input }}" class="r w-s" inputmode="decimal" aria-label="Số lượng"></td>
+            <td><input name="item_dg" value="{{ it.don_gia|num_input }}" class="r w-m" inputmode="decimal" aria-label="Đơn giá"></td>
+            <td><input name="item_tt" value="{{ it.thanh_tien|num_input }}" class="r w-m" inputmode="decimal" aria-label="Thành tiền"></td>
+            <td><input name="item_gc" value="{{ it.ghi_chu or '' }}" class="w-m" aria-label="Ghi chú"></td>
+            <td><button type="button" class="btn btn-small row-del" aria-label="Xóa dòng">Xóa</button></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <div class="actions tight">
+        <button type="button" class="btn btn-small" id="row-add">Thêm dòng</button>
+        <span class="hint" id="items-sum"></span>
+      </div>
+    </fieldset>
+    <fieldset class="panel">
+      <legend>Tổng tiền</legend>
+      <div class="grid-4">
+        <label class="field"><span>Cộng tiền hàng</span><input name="tong_tien_truoc_thue" value="{{ d.tong_tien_truoc_thue|num_input }}" class="r calc" readonly tabindex="-1"></label>
+        <label class="field"><span>Thuế suất</span><input name="thue_suat" value="{{ d.thue_suat or '' }}" placeholder="10%, 8%, KCT hoặc 5%, 10%" autocomplete="off"></label>
+        <label class="field"><span>Tiền thuế</span><input name="tien_thue" value="{{ d.tien_thue|num_input }}" class="r calc" readonly tabindex="-1"></label>
+        <label class="field"><span>Tổng thanh toán</span><input name="tong_tien_thanh_toan" value="{{ d.tong_tien_thanh_toan|num_input }}" class="r calc" readonly tabindex="-1"></label>
+      </div>
+      <label class="field"><span>Số tiền bằng chữ</span><input name="so_tien_bang_chu" value="{{ d.so_tien_bang_chu or '' }}" class="calc" readonly tabindex="-1"></label>
+      <p class="hint">Các ô màu xám tự tính lại khi bạn sửa số lượng, đơn giá, thành tiền hoặc thuế suất.
+        Hóa đơn nhiều mức thuế (vd “5%, 10%”): ô Tiền thuế mở để nhập đúng số trên hóa đơn.</p>
+    </fieldset>
+
+    <fieldset class="panel">
+      <legend>Thông tin trên phiếu</legend>
+      {% if not r.template_path %}{{ logo_picker(extra.logo) }}{% endif %}
+      <div class="grid-3">
+        {% for k, label in EXTRA_FIELDS.items() if k != 'ghi_chu' %}
+        <label class="field"><span>{{ label }}{% if k == 'da_tam_ung' %} (đồng){% endif %}</span>
+          <input name="{{ k }}" value="{{ extra[k]|num_input if k == 'da_tam_ung' else (extra[k] or '') }}" {% if k == 'da_tam_ung' %}class="r" inputmode="decimal"{% endif %}></label>
+        {% endfor %}
+      </div>
+      <label class="field" style="margin-top:1rem"><span>Ghi chú (dòng “Ghi chú（考）” trên phiếu)</span>
+        <!-- <textarea name="ghi_chu" rows="2" placeholder="Bỏ trống để tự ghi: Theo hóa đơn số {{ d.so_hoa_don or '…' }}, ký hiệu {{ d.ky_hieu or '…' }}, ngày {{ d.ngay_thang_nam or '…' }}">{{ extra.ghi_chu or '' }}</textarea></label> -->
+        <textarea name="ghi_chu" rows="2" placeholder="Không bắt buộc. Bỏ trống thì phiếu không ghi gì ở dòng này.">{{ extra.ghi_chu or '' }}</textarea></label>
+      </fieldset>
+
+    <div class="actions sticky-actions">
+      <button class="btn btn-primary" type="submit" name="then" value="send">Lưu và xác nhận gửi mail</button>
+      <button class="btn" type="submit" name="then" value="stay">Lưu</button>
+      <a class="btn-link" href="/de-nghi/{{ r.id }}">Hủy</a>
+    </div>
+  </form>
+</div>
+
+<template id="row-tpl">
+  <tr>
+    <td><input name="item_ten" aria-label="Diễn giải"></td>
+    <td><input name="item_dvt" class="w-s" aria-label="Đơn vị"></td>
+    <td><input name="item_sl" class="r w-s" inputmode="decimal" aria-label="Số lượng"></td>
+    <td><input name="item_dg" class="r w-m" inputmode="decimal" aria-label="Đơn giá"></td>
+    <td><input name="item_tt" class="r w-m" inputmode="decimal" aria-label="Thành tiền"></td>
+    <td><input name="item_gc" class="w-m" aria-label="Ghi chú"></td>
+    <td><button type="button" class="btn btn-small row-del" aria-label="Xóa dòng">Xóa</button></td>
+  </tr>
+</template>
+{% endblock %}

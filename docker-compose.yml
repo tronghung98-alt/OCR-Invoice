@@ -1,0 +1,37 @@
+# Tùy chọn: chạy MySQL hoặc PostgreSQL bằng Docker thay cho SQLite.
+#   MySQL:      docker compose --profile mysql up -d
+#               DATABASE_URL=mysql+pymysql://dntt:dntt_matkhau@localhost:3306/dntt   (pip install pymysql)
+#   PostgreSQL: docker compose --profile postgres up -d
+#               DATABASE_URL=postgresql+psycopg://dntt:dntt_matkhau@localhost:5432/dntt   (pip install "psycopg[binary]")
+services:
+  mysql:
+    image: mysql:8.4
+    profiles: ["mysql"]
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: dntt
+      MYSQL_USER: dntt
+      MYSQL_PASSWORD: dntt_matkhau
+      MYSQL_ROOT_PASSWORD: doi_mat_khau_root
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - dntt_mysql:/var/lib/mysql
+
+  postgres:
+    image: postgres:16
+    profiles: ["postgres"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dntt
+      POSTGRES_PASSWORD: dntt_matkhau
+      POSTGRES_DB: dntt
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - dntt_pg:/var/lib/postgresql/data
+
+volumes:
+  dntt_mysql:
+  dntt_pg:

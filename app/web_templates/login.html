@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Đăng nhập{% endblock %}
+{% block body_class %}login-body{% endblock %}
+{% block main_class %}login{% endblock %}
+{% block content %}
+<section class="login-sheet" aria-hidden="true">
+  <img class="brand-logo" src="/static/logo.png?v=1" alt="">
+  <p class="sheet-company">SORIMACHI <span>AX LAB</span></p>
+  <p class="sheet-title">Giấy đề nghị thanh toán</p>
+  <p class="sheet-title-jp">立替経費精算書</p>
+  <div class="sheet-lines"><i></i><i></i><i></i><i></i><i></i></div>
+  <span class="sheet-seal">✓</span>
+</section>
+<section class="login-form">
+  <h1>Đăng nhập</h1>
+  <p class="lede">Gửi hóa đơn, nhận giấy đề nghị thanh toán điền sẵn.</p>
+  {% if error %}<div class="flash flash-error" role="alert">{{ error }}</div>{% endif %}
+  <form method="post" action="/login" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="field"><span>Tên đăng nhập</span>
+      <input name="username" value="{{ username or '' }}" autocomplete="username" autocapitalize="none" required autofocus></label>
+    <label class="field"><span>Mật khẩu</span>
+      <input name="password" type="password" autocomplete="current-password" required></label>
+    <button class="btn btn-primary btn-block" type="submit">Đăng nhập</button>
+  </form>
+  <p class="hint">Quên mật khẩu? Liên hệ quản trị viên để được đặt lại.</p>
+</section>
+{% endblock %}

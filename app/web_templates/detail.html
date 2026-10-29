@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% from "_macros.html" import seal %}
+{% block title %}{{ r.so_de_nghi or ('Phiếu #' ~ r.id) }}{% endblock %}
+{% block content %}
+<a class="back" href="/de-nghi">Đề nghị đã gửi</a>
+<div class="detail-head" {% if r.status in ('queued', 'processing') %}data-poll="/de-nghi/{{ r.id }}/trang-thai"{% endif %}>
+  <div>
+    <h1>{{ r.so_de_nghi or ('Phiếu #' ~ r.id) }}</h1>
+    <p class="meta">Gửi lúc {{ r.created_at|local }}{% if user.is_admin %} bởi {{ r.user.label }}{% endif %}. File gốc: {{ r.original_filename }}</p>
+  </div>
+  {{ seal(r.status, big=true) }}
+</div>
+
+{# Tiến trình theo sơ đồ quy trình #}
+{% set step = {'queued': 1, 'processing': 1, 'needs_human': 2, 'review': 2, 'sent': 3, 'confirmed': 4}[r.status] %}
+<ol class="stepper" aria-label="Tiến trình phiếu">
+  <li class="{{ 'done' if step > 1 else 'now' }}">AI đọc và tự kiểm tra</li>
+  <li class="{{ 'done' if step > 2 else ('now' if step == 2 else '') }}{{ ' alert' if r.status == 'needs_human' else '' }}">Người xem xét, sửa</li>
+  <li class="{{ 'done' if step > 3 else ('now' if step == 3 else '') }}">Gửi quản lý</li>
+  <li class="{{ 'done' if step >= 4 else '' }}">Quản lý xác nhận đọc</li>
+</ol>
+
+{# ---- thông báo theo trạng thái ---- #}
+{% if r.status == 'queued' %}
+  <div class="flash flash-info" role="status">Hóa đơn đang trong hàng đợi, AI sẽ đọc lần lượt. {{ r.error or '' }}
+    {% if not worker_alive %}<br><strong>Vòng lặp AI đang không chạy. Khởi động lại server.</strong>{% endif %}</div>
+{% elif r.status == 'processing' %}
+  <div class="flash flash-info" role="status">AI đang đọc và tự kiểm tra hóa đơn, thường mất 10–60 giây. Trang sẽ tự cập nhật.</div>
+{% elif r.status == 'needs_human' %}
+  <div class="flash flash-warn" role="alert"><strong>Cần người xử lý.</strong> {{ r.error }}</div>
+{% elif r.status == 'sent' %}
+  <div class="flash flash-info">Đã gửi cho <strong>{{ r.sent_to }}</strong> lúc {{ r.sent_at|local }}, đang chờ quản lý bấm Xác nhận.</div>
+{% elif r.status == 'confirmed' %}
+  <div class="flash flash-ok"><strong>{{ r.confirmed_by }}</strong> đã xác nhận đọc lúc {{ r.confirmed_at|local }}.</div>
+{% endif %}
+{% if r.warnings and r.status in ('review', 'needs_human') %}
+<div class="flash flash-warn"><strong>AI tự kiểm tra thấy {{ r.warnings|length }} điểm cần xem lại:</strong>
+  <ul>{% for w in r.warnings %}<li>{{ w }}</li>{% endfor %}</ul></div>
+{% endif %}
+
+{# ---- thao tác theo trạng thái ---- #}
+<div class="actions">
+  {% if r.status == 'review' %}
+    <a class="btn btn-primary" href="/de-nghi/{{ r.id }}/gui">Xác nhận và gửi mail</a>
+    <a class="btn" href="/de-nghi/{{ r.id }}/sua">Sửa trực tiếp</a>
+  {% elif r.status == 'needs_human' %}
+    <a class="btn btn-primary" href="/de-nghi/{{ r.id }}/sua">Nhập hoặc sửa tay</a>
+  {% elif r.status == 'sent' %}
+    <a class="btn" href="/de-nghi/{{ r.id }}/gui">Gửi lại mail</a>
+    <form method="post" action="/de-nghi/{{ r.id }}/thu-hoi" class="inline-form" data-confirm="Thu hồi để sửa? Nút Xác nhận trong mail đã gửi sẽ không dùng được nữa.">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn" type="submit">Thu hồi để sửa</button></form>
+  {% endif %}
+  {% if r.status in REREADABLE %}
+    <form method="post" action="/de-nghi/{{ r.id }}/doc-lai" class="inline-form"
+      {% if r.edited_by_human %}data-confirm="AI đọc lại sẽ thay thế phần bạn đã sửa tay. Tiếp tục?"{% endif %}>
+      <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn" type="submit">AI đọc lại</button></form>
+  {% endif %}
+  {% if r.output_path and r.status not in ('queued', 'processing') %}<a class="btn" href="/de-nghi/{{ r.id }}/excel">Tải Excel</a>{% endif %}
+  <a class="btn" href="/de-nghi/{{ r.id }}/hoa-don?download=1">Tải hóa đơn gốc</a>
+  {% if r.status != 'processing' and (r.status != 'confirmed' or user.is_admin) %}
+  <form method="post" action="/de-nghi/{{ r.id }}/xoa" class="inline-form push-right" data-confirm="Xóa phiếu này và các file đi kèm? Không khôi phục được.">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn btn-danger" type="submit">Xóa phiếu</button></form>
+  {% endif %}
+</div>
+
+<div class="detail-grid">
+  <section class="preview" aria-label="Hóa đơn gốc">
+    {% if r.mime_type == 'application/pdf' %}
+      <iframe src="/de-nghi/{{ r.id }}/hoa-don" title="Hóa đơn gốc"></iframe>
+    {% else %}
+      <a href="/de-nghi/{{ r.id }}/hoa-don" target="_blank" rel="noopener"><img src="/de-nghi/{{ r.id }}/hoa-don" alt="Ảnh hóa đơn gốc"></a>
+    {% endif %}
+  </section>
+
+  <div class="side">
+    <section class="extracted">
+      <h2>Nội dung {% if r.edited_by_human %}đã sửa{% else %}AI đọc được{% endif %}</h2>
+      {% if d %}{% include "_invoice.html" %}
+      {% elif r.status in ('queued', 'processing') %}<p class="muted">Nội dung sẽ hiện ở đây khi AI đọc xong.</p>
+      {% else %}<p class="muted">Chưa có nội dung. Bấm “Nhập hoặc sửa tay” hoặc “AI đọc lại”.</p>{% endif %}
+    </section>
+
+    <section class="timeline-box">
+      <h2>Nhật ký</h2>
+      <ol class="timeline">
+        {% for e in r.events|reverse %}
+        <li class="ev-{{ e.kind }}"><span class="ev-time">{{ e.at|local }}</span>
+          <span class="ev-actor">{{ e.actor }}</span> <span class="ev-msg">{{ e.message }}</span></li>
+        {% endfor %}
+      </ol>
+    </section>
+  </div>
+</div>
+{% endblock %}
